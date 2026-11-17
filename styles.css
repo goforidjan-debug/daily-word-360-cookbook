@@ -2,7 +2,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --cream: #FFF8EC;
+  --cream: #FFFFFF;
   --cream2: #FFF3D6;
   --ink: #3B2A20;
   --ink-soft: #6B543F;
@@ -61,9 +61,31 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 .page h2 { font-size: 30px; line-height: 1.08; font-weight: 800; letter-spacing: -0.01em; }
 .page h3 { font-size: 15px; margin: 9px 0 6px; text-transform: uppercase; letter-spacing: .06em; }
+
+/* ---------- corner photo: Godwin's faded salad bowl, same on every page ----------
+   One image (images/faded-salad-bowl.png — his round bowl, cut out with its
+   own alpha), same position on every corner page, matching his CorelDRAW
+   layout: a circle ~70% of the page width (his measured ~65%, increased a
+   little), centred just inside the bottom-right corner (7% of the width
+   from the right edge, ~2.5% of the height from the bottom) so a large
+   part of it bleeds off the right and bottom edges, at ~25% opacity so it
+   reads as a faint watermark. No gradient mask — the image carries its own
+   soft circular edge, and the low opacity is the fade. Decorative only: a
+   real <img> (first child of the page) so it survives the flipbook
+   library's cloning. It sits behind the page content and is clipped by
+   the page edge (the "power clip" bleed). */
+.page.corner > *:not(.corner-photo) { position: relative; z-index: 1; }
+.page.corner > .corner-photo {
+  position: absolute; right: -28%; bottom: -18.5%;
+  width: 70%; aspect-ratio: 1 / 1; z-index: 0;
+  object-fit: contain;
+  opacity: .25;
+  pointer-events: none;
+}
 
 .eyebrow {
   font-size: 11px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase;
