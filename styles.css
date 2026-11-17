@@ -223,6 +223,9 @@ body {
   width: 100%; max-width: 1020px;
   display: flex; align-items: center; justify-content: center; gap: 10px;
   padding: 12px 0 6px;
+  /* The flipbook canvas can grow taller than its stage on wide (spread-view)
+     screens and overlap this row. Keep the buttons above it so clicks land. */
+  position: relative; z-index: 10;
 }
 .controls button {
   font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer;
