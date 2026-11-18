@@ -33,6 +33,50 @@
 
   pageFlip.loadFromHTML(document.querySelectorAll('.page'));
 
+  // FIX (2026-11-18): short desktop windows clipped the bottom of tall
+  // pages. StPageFlip 'stretch' shrinks the .page box but the content is
+  // laid out at fixed px, so wrap each page's children in a .page-scale
+  // div (design size 420x700) and scale it to the page's rendered size.
+  // The wrapper lives inside the .page element, so it travels with it
+  // through flips; scale is re-applied on resize, flip and orientation
+  // change. index.html is untouched.
+  var DESIGN_W = 420;
+  function fitPages() {
+    document.querySelectorAll('.page').forEach(function (pg) {
+      var w = null;
+      for (var k = 0; k < pg.children.length; k++) {
+        if (pg.children[k].className === 'page-scale') { w = pg.children[k]; break; }
+      }
+      if (!w) return;
+      var s = pg.clientWidth / DESIGN_W;
+      if (s > 0 && isFinite(s)) {
+        var t = 'scale(' + s + ')';
+        if (w.style.transform !== t) w.style.transform = t;
+      }
+    });
+  }
+  document.querySelectorAll('.page').forEach(function (pg) {
+    for (var k = 0; k < pg.children.length; k++) {
+      if (pg.children[k].className === 'page-scale') return; // already wrapped
+    }
+    var wrap = document.createElement('div');
+    wrap.className = 'page-scale';
+    while (pg.firstChild) wrap.appendChild(pg.firstChild);
+    pg.appendChild(wrap);
+  });
+  fitPages();
+  pageFlip.on('init', fitPages);
+  pageFlip.on('flip', fitPages);
+  pageFlip.on('changeOrientation', fitPages);
+  window.addEventListener('resize', fitPages);
+  // StPageFlip only keeps the current spread in the DOM and inserts /
+  // resizes pages as you flip, so re-fit whenever the book's DOM changes
+  // (a ResizeObserver on #book alone never fires on flips). fitPages only
+  // writes when the scale value actually changes, so this settles.
+  if ('MutationObserver' in window) {
+    new MutationObserver(fitPages).observe(bookEl, { childList: true, attributes: true, subtree: true });
+  }
+
   // Debug/verification handle (harmless in production).
   window.__pageFlip = pageFlip;
 
