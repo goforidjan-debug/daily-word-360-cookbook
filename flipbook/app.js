@@ -1,0 +1,167 @@
+// The Biblical Cookbook — flipbook wiring (StPageFlip v2, vendored in vendor/)
+(function () {
+  var bookEl = document.getElementById('book');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var tocBtn = document.getElementById('tocBtn');
+  var pageLabel = document.getElementById('pageLabel');
+
+  // Page names for the indicator (0-based page index -> label)
+  var PAGE_NAMES = ['Cover', 'How to Use', 'Contents', 'Contents', 'Recipe 1', 'Recipe 1', 'Recipe 2', 'Recipe 2', 'Recipe 3', 'Recipe 3', 'Recipe 4', 'Recipe 4', 'Recipe 5', 'Recipe 5', 'Recipe 6', 'Recipe 6', 'Recipe 7', 'Recipe 7', 'Recipe 8', 'Recipe 8', 'Recipe 9', 'Recipe 9', 'Recipe 10', 'Recipe 10', 'Recipe 11', 'Recipe 11', 'Recipe 12', 'Recipe 12', 'Recipe 13', 'Recipe 13', 'Recipe 14', 'Recipe 14', 'Recipe 15', 'Recipe 15', 'Recipe 16', 'Recipe 16', 'Recipe 17', 'Recipe 17', 'Recipe 18', 'Recipe 18', 'Recipe 19', 'Recipe 19', 'Recipe 20', 'Recipe 20', 'Recipe 21', 'Recipe 21', 'Recipe 22', 'Recipe 22', 'Recipe 23', 'Recipe 23', 'Recipe 24', 'Recipe 24', 'Recipe 25', 'Recipe 25', 'Article 1', 'Article 1', 'Article 2', 'Article 2', 'Article 3', 'Article 3', 'Article 4', 'Article 4'];
+  var TOTAL = 62;
+
+  var pageFlip = new St.PageFlip(bookEl, {
+    width: 420,
+    height: 700,
+    size: 'stretch',
+    minWidth: 315,
+    maxWidth: 620,
+    minHeight: 420,
+    maxHeight: 820,
+    showCover: true,
+    usePortrait: true,
+    mobileScrollSupport: true,
+    swipeDistance: 30,
+    clickEventForward: true,
+    useMouseEvents: true,
+    drawShadow: true,
+    flippingTime: 700,
+    maxShadowOpacity: 0.5,
+    showPageCorners: true,
+    disableFlipByClick: false
+  });
+
+  pageFlip.loadFromHTML(document.querySelectorAll('.page'));
+
+  // FIX (2026-11-18): short desktop windows clipped the bottom of tall
+  // pages. StPageFlip 'stretch' shrinks the .page box but the content is
+  // laid out at fixed px, so wrap each page's children in a .page-scale
+  // div (design size 420x700) and scale it to the page's rendered size.
+  // The wrapper lives inside the .page element, so it travels with it
+  // through flips; scale is re-applied on resize, flip and orientation
+  // change. index.html is untouched.
+  var DESIGN_W = 420;
+  function fitPages() {
+    document.querySelectorAll('.page').forEach(function (pg) {
+      var w = null;
+      for (var k = 0; k < pg.children.length; k++) {
+        if (pg.children[k].className === 'page-scale') { w = pg.children[k]; break; }
+      }
+      if (!w) return;
+      var s = pg.clientWidth / DESIGN_W;
+      if (s > 0 && isFinite(s)) {
+        var t = 'scale(' + s + ')';
+        if (w.style.transform !== t) w.style.transform = t;
+      }
+    });
+  }
+  document.querySelectorAll('.page').forEach(function (pg) {
+    for (var k = 0; k < pg.children.length; k++) {
+      if (pg.children[k].className === 'page-scale') return; // already wrapped
+    }
+    var wrap = document.createElement('div');
+    wrap.className = 'page-scale';
+    while (pg.firstChild) wrap.appendChild(pg.firstChild);
+    pg.appendChild(wrap);
+  });
+  fitPages();
+  pageFlip.on('init', fitPages);
+  pageFlip.on('flip', fitPages);
+  pageFlip.on('changeOrientation', fitPages);
+  window.addEventListener('resize', fitPages);
+  // StPageFlip only keeps the current spread in the DOM and inserts /
+  // resizes pages as you flip, so re-fit whenever the book's DOM changes
+  // (a ResizeObserver on #book alone never fires on flips). fitPages only
+  // writes when the scale value actually changes, so this settles.
+  if ('MutationObserver' in window) {
+    new MutationObserver(fitPages).observe(bookEl, { childList: true, attributes: true, subtree: true });
+  }
+
+  // Debug/verification handle (harmless in production).
+  window.__pageFlip = pageFlip;
+
+  function updateUI() {
+    var i = pageFlip.getCurrentPageIndex();
+    var landscape = (pageFlip.getOrientation() === 'landscape');
+    var label;
+    if (landscape && i > 0) {
+      // In spread view the label shows the pages on display.
+      var last = Math.min(i + 1, TOTAL - 1);
+      label = (last > i)
+        ? PAGE_NAMES[i] + '  ·  Pages ' + (i + 1) + '–' + (last + 1) + ' / ' + TOTAL
+        : PAGE_NAMES[i] + '  ·  ' + (i + 1) + ' / ' + TOTAL;
+    } else {
+      label = PAGE_NAMES[i] + '  ·  ' + (i + 1) + ' / ' + TOTAL;
+    }
+    pageLabel.textContent = label;
+    prevBtn.disabled = (i === 0);
+    nextBtn.disabled = landscape ? (i >= TOTAL - 2) : (i === TOTAL - 1);
+  }
+
+  pageFlip.on('flip', updateUI);
+  pageFlip.on('init', updateUI);
+
+  prevBtn.addEventListener('click', function () { pageFlip.flipPrev(); });
+  nextBtn.addEventListener('click', function () { pageFlip.flipNext(); });
+  tocBtn.addEventListener('click', function () { pageFlip.turnToPage(2); });
+
+  // Contents jump links + "Back to Contents" links
+  document.querySelectorAll('[data-goto]').forEach(function (el) {
+    el.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      pageFlip.turnToPage(parseInt(el.getAttribute('data-goto'), 10));
+    });
+  });
+
+  // Keyboard arrows
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'ArrowRight') pageFlip.flipNext();
+    if (ev.key === 'ArrowLeft') pageFlip.flipPrev();
+  });
+
+  // One-tap Install (2026-11-25): same green Install button as My Little
+  // Studio, on the cover. Chrome/Edge fire beforeinstallprompt when the app
+  // can be installed; we hold the event and show our own button. It only
+  // shows when the prompt is actually available AND the app is not already
+  // installed (standalone display-mode or iOS navigator.standalone). iPhone
+  // Safari never fires this event, so no button appears there — the install
+  // guide covers iPhone (Share → Add to Home Screen). The prompt can be
+  // used once: after a tap we clear it and hide the button whether the user
+  // accepts or dismisses. The button lives inside the cover page, so its
+  // click/touch must NOT reach StPageFlip — stopPropagation on both, the
+  // same way the Contents jump links already do for clicks.
+  var deferredInstallPrompt = null;
+  var installBtn = document.getElementById('installBtn');
+  function isAppInstalled() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+      || (window.navigator && window.navigator.standalone === true);
+  }
+  function updateInstallBtn() {
+    if (!installBtn) return;
+    installBtn.classList.toggle('hidden', !(deferredInstallPrompt && !isAppInstalled()));
+  }
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    updateInstallBtn();
+  });
+  window.addEventListener('appinstalled', function () {
+    deferredInstallPrompt = null;
+    updateInstallBtn();
+  });
+  if (installBtn) {
+    installBtn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      if (!deferredInstallPrompt) return;
+      var promptEv = deferredInstallPrompt;
+      deferredInstallPrompt = null;
+      updateInstallBtn();
+      try { promptEv.prompt(); } catch (err) {}
+    });
+    installBtn.addEventListener('touchstart', function (ev) { ev.stopPropagation(); }, { passive: true });
+  }
+  // Debug handle (harmless in production).
+  window.__cookbook = { get install() { return { available: !!deferredInstallPrompt, installed: isAppInstalled(), buttonVisible: !!(installBtn && !installBtn.classList.contains('hidden')) }; } };
+
+  updateUI();
+})();
