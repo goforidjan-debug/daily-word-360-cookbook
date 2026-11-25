@@ -145,6 +145,19 @@ body {
   padding: 5px 10px; border-radius: 20px;
 }
 .cover-hint { margin-top: 16px; font-size: 13px; font-weight: 700; color: #fff; }
+.hidden { display: none !important; }
+
+/* One-tap Install button (2026-11-25): same green pill as My Little Studio.
+   Lives on the cover, below the "Tap or swipe to open" hint. Shown only
+   when beforeinstallprompt has fired and the app is not already installed. */
+.install-btn { min-height: 48px; min-width: 220px; width: max-content; max-width: 100%; padding: 0 24px; border-radius: 999px;
+  background: linear-gradient(180deg, #8FD977 0%, #5CB85C 45%, #43A047 100%); color: #fff;
+  font-family: inherit; font-size: 16px; font-weight: 800; border: none; cursor: pointer;
+  box-shadow: 0 8px 22px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.5), inset 0 -3px 0 rgba(0,0,0,.15);
+  display: flex; align-items: center; justify-content: center; gap: 10px; margin: 16px auto 0; }
+.install-btn svg { width: 20px; height: 20px; flex: none; }
+.install-btn:hover { filter: brightness(1.07); }
+.install-btn:active { transform: translateY(2px); }
 
 /* how to use */
 .steps { list-style: none; margin-top: 12px; display: flex; flex-direction: column; gap: 9px; }

@@ -119,5 +119,49 @@
     if (ev.key === 'ArrowLeft') pageFlip.flipPrev();
   });
 
+  // One-tap Install (2026-11-25): same green Install button as My Little
+  // Studio, on the cover. Chrome/Edge fire beforeinstallprompt when the app
+  // can be installed; we hold the event and show our own button. It only
+  // shows when the prompt is actually available AND the app is not already
+  // installed (standalone display-mode or iOS navigator.standalone). iPhone
+  // Safari never fires this event, so no button appears there — the install
+  // guide covers iPhone (Share → Add to Home Screen). The prompt can be
+  // used once: after a tap we clear it and hide the button whether the user
+  // accepts or dismisses. The button lives inside the cover page, so its
+  // click/touch must NOT reach StPageFlip — stopPropagation on both, the
+  // same way the Contents jump links already do for clicks.
+  var deferredInstallPrompt = null;
+  var installBtn = document.getElementById('installBtn');
+  function isAppInstalled() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+      || (window.navigator && window.navigator.standalone === true);
+  }
+  function updateInstallBtn() {
+    if (!installBtn) return;
+    installBtn.classList.toggle('hidden', !(deferredInstallPrompt && !isAppInstalled()));
+  }
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    updateInstallBtn();
+  });
+  window.addEventListener('appinstalled', function () {
+    deferredInstallPrompt = null;
+    updateInstallBtn();
+  });
+  if (installBtn) {
+    installBtn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      if (!deferredInstallPrompt) return;
+      var promptEv = deferredInstallPrompt;
+      deferredInstallPrompt = null;
+      updateInstallBtn();
+      try { promptEv.prompt(); } catch (err) {}
+    });
+    installBtn.addEventListener('touchstart', function (ev) { ev.stopPropagation(); }, { passive: true });
+  }
+  // Debug handle (harmless in production).
+  window.__cookbook = { get install() { return { available: !!deferredInstallPrompt, installed: isAppInstalled(), buttonVisible: !!(installBtn && !installBtn.classList.contains('hidden')) }; } };
+
   updateUI();
 })();
